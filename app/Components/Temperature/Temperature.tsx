@@ -1,4 +1,3 @@
-"use client";
 import React, { useEffect, useState } from "react";
 import { useGlobalContext } from "@/app/context/globalContext";
 import {
@@ -15,23 +14,45 @@ import moment from "moment";
 function Temperature() {
   const { forecast } = useGlobalContext();
 
-  const { main, timezone, name, weather } = forecast;
+  // State
+  const [localTime, setLocalTime] = useState("");
+  const [currentDay, setCurrentDay] = useState("");
 
-  if (!forecast || !weather) {
+  useEffect(() => {
+    if (!forecast || !forecast.weather) return; // Exit early if forecast or weather is not available
+
+    const { timezone } = forecast;
+
+    // Live time update
+    const interval = setInterval(() => {
+      const localMoment = moment().utcOffset(timezone / 60);
+      // custom format: 24 hour format
+      const formatedTime = localMoment.format("HH:mm:ss");
+      // day of the week
+      const day = localMoment.format("dddd");
+
+      setLocalTime(formatedTime);
+      setCurrentDay(day);
+    }, 1000);
+
+    // Cleanup interval
+    return () => clearInterval(interval);
+  }, [forecast]);
+
+  if (!forecast || !forecast.weather) {
     return <div>Loading...</div>;
   }
 
+  const { main, name, weather } = forecast;
   const temp = kelvinToCelsius(main?.temp);
+  const { description } = weather[0];
+
+  // Assuming minTemp and maxTemp are defined elsewhere
   const minTemp = kelvinToCelsius(main?.temp_min);
   const maxTemp = kelvinToCelsius(main?.temp_max);
 
-  // State
-  const [localTime, setLocalTime] = useState<string>("");
-  const [currentDay, setCurrentDay] = useState<string>("");
-
-  const { main: weatherMain, description } = weather[0];
-
   const getIcon = () => {
+    const { main: weatherMain } = weather[0];
     switch (weatherMain) {
       case "Drizzle":
         return drizzleIcon;
@@ -47,24 +68,6 @@ function Temperature() {
         return clearSky;
     }
   };
-
-  // Live time update
-  useEffect(() => {
-    // upadte time every second
-    const interval = setInterval(() => {
-      const localMoment = moment().utcOffset(timezone / 60);
-      // custom format: 24 hour format
-      const formatedTime = localMoment.format("HH:mm:ss");
-      // day of the week
-      const day = localMoment.format("dddd");
-
-      setLocalTime(formatedTime);
-      setCurrentDay(day);
-    }, 1000);
-
-    // clear interval
-    return () => clearInterval(interval);
-  }, [timezone]);
 
   return (
     <div
